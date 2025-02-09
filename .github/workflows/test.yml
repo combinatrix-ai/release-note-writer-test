@@ -1,0 +1,37 @@
+name: Test
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+      
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v4
+        - name: Generate Release Note
+          id: generate-release-note
+          uses: combinatrix-ai/release-note-writer@v1
+          with:
+            api_key: ${{ secrets.GOOGLE_CLOUD_API_KEY }}
+        - name: Create git tag as run date
+          id: create-tag
+          run: |
+            TAG=$(date +'%Y%m%d%H%M%S')
+            git tag $TAG
+            echo ::set-output name=tag::$TAG
+        - name: Push tag
+          run: git push origin $(date +'%Y%m%d%H%M%S')
+          
+        - name: Create GitHub Release
+          uses: softprops/action-gh-release@v1  # Third-party action
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            tag_name: ${{ steps.create-tag.outputs.tag }}
+            body: ${{ steps.generate-release-note.outputs.release_note }}
